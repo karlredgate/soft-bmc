@@ -1,0 +1,7 @@
+.tmp_versions
+Module.symvers
+*.o.cmd
+*.o
+*.ko.cmd
+*.ko
+stonith.mod.c
