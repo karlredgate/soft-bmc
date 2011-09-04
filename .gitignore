@@ -5,3 +5,4 @@ Module.symvers
 *.ko.cmd
 *.ko
 stonith.mod.c
+shoot
