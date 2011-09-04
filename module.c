@@ -14,11 +14,13 @@
 
 #define MODULE_NAME "stonith"
 
+static const struct in6_addr local_in6addr_any = IN6ADDR_ANY_INIT;
+
 struct {
     struct task_struct *thread;
     int running;
     struct socket *sock;
-    struct sockaddr_in address;
+    struct sockaddr_in6 binding;
 } listener;
 
 static void run(void) {
@@ -34,6 +36,8 @@ static void run(void) {
         /* what */
 	msleep( 500 );
     }
+
+    sock_release( listener.sock );
     printk( KERN_INFO MODULE_NAME": thread terminating\n" );
 
     listener.running = 0;
@@ -43,16 +47,24 @@ static void run(void) {
 static int __init stonith_init(void) {
     int err;
 
+    memset( &listener, 0, sizeof listener );
+
     err = sock_create( AF_INET6, SOCK_DGRAM, IPPROTO_UDP, &listener.sock );
     if ( err < 0 ) {
         printk( KERN_INFO MODULE_NAME": failed to create socket\n" );
         return -ENOMEM;
     }
-    listener.address.sin_family = AF_INET6;
-    listener.address.sin_addr.s_addr = htonl(INADDR_ANY);
-    listener.address.sin_port = htons(1337);
+    listener.binding.sin6_family = AF_INET6;
+    listener.binding.sin6_flowinfo = 0;
+    listener.binding.sin6_addr = local_in6addr_any;
+    listener.binding.sin6_port = htons(1337);
 
-    memset( &listener, 0, sizeof listener );
+    err = listener.sock->ops->bind( listener.sock, (struct sockaddr *)&listener.binding, sizeof(struct sockaddr_in6) );
+    if ( err < 0 ) {
+        printk( KERN_INFO MODULE_NAME": bind failed\n" );
+        return -EOPNOTSUPP;
+    }
+
     listener.thread = kthread_run( (void *)run, NULL, MODULE_NAME );
     if ( IS_ERR(listener.thread) ) {
         printk( KERN_INFO MODULE_NAME": unable to start kernel thread\n" );
