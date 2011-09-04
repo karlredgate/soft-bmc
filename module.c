@@ -45,10 +45,13 @@ stonith_receive( unsigned char *buffer, int size ) {
     set_fs( KERNEL_DS );
     bytes = sock_recvmsg( listener.sock, &message, size, message.msg_flags );
     set_fs( fs );
+
+    return bytes;
 }
 
 static void stonith_run(void) {
     unsigned char buffer[1500];
+    int bytes;
 
     lock_kernel();
     listener.running = 1;
@@ -58,7 +61,11 @@ static void stonith_run(void) {
     unlock_kernel();
 
     for (;;) {
-	stonith_receive( buffer, sizeof buffer );
+	bytes = stonith_receive( buffer, sizeof buffer );
+	if ( bytes > 0 ) {
+	    buffer[bytes] = '\0';
+            printk( KERN_INFO MODULE_NAME": received '%s'\n", buffer );
+	}
 	if ( signal_pending(current) )  break;
         /* what */
 	msleep( 500 );
