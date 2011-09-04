@@ -4,6 +4,12 @@
 #include <linux/init.h>
 #include <linux/kthread.h>
 
+#include <linux/netdevice.h>
+#include <linux/ip.h>
+#include <linux/ipv6.h>
+#include <linux/in.h>
+#include <linux/in6.h>
+
 #include <linux/delay.h>
 
 #define MODULE_NAME "stonith"
@@ -11,6 +17,8 @@
 struct {
     struct task_struct *thread;
     int running;
+    struct socket *sock;
+    struct sockaddr_in address;
 } listener;
 
 static void run(void) {
@@ -33,6 +41,17 @@ static void run(void) {
 }
 
 static int __init stonith_init(void) {
+    int err;
+
+    err = sock_create( AF_INET6, SOCK_DGRAM, IPPROTO_UDP, &listener.sock );
+    if ( err < 0 ) {
+        printk( KERN_INFO MODULE_NAME": failed to create socket\n" );
+        return -ENOMEM;
+    }
+    listener.address.sin_family = AF_INET6;
+    listener.address.sin_addr.s_addr = htonl(INADDR_ANY);
+    listener.address.sin_port = htons(1337);
+
     memset( &listener, 0, sizeof listener );
     listener.thread = kthread_run( (void *)run, NULL, MODULE_NAME );
     if ( IS_ERR(listener.thread) ) {
