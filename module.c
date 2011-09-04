@@ -11,6 +11,7 @@
 #include <linux/in6.h>
 
 #include <linux/delay.h>
+#include <linux/reboot.h>
 
 #define MODULE_NAME "stonith"
 
@@ -65,6 +66,10 @@ static void stonith_run(void) {
 	if ( bytes > 0 ) {
 	    buffer[bytes] = '\0';
             printk( KERN_INFO MODULE_NAME": received '%s'\n", buffer );
+	    if ( strncmp(buffer, "poweroff", 8) == 0 ) {
+                printk( KERN_INFO MODULE_NAME": Powering Off\n" );
+	        emergency_restart();
+	    }
 	}
 	if ( signal_pending(current) )  break;
         /* what */
