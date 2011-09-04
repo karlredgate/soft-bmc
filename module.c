@@ -16,14 +16,40 @@
 
 static const struct in6_addr local_in6addr_any = IN6ADDR_ANY_INIT;
 
-struct {
+static struct {
     struct task_struct *thread;
     int running;
     struct socket *sock;
     struct sockaddr_in6 binding;
 } listener;
 
-static void run(void) {
+static int
+stonith_receive( unsigned char *buffer, int size ) {
+    struct msghdr message;
+    struct iovec iov;
+    int bytes;
+    mm_segment_t fs;
+
+    iov.iov_base = buffer;
+    iov.iov_len = size;
+
+    message.msg_flags = MSG_DONTWAIT;
+    message.msg_name = &listener.binding;
+    message.msg_namelen = sizeof listener.binding;
+    message.msg_control = NULL;
+    message.msg_controllen = 0;
+    message.msg_iov = &iov;
+    message.msg_iovlen = 1;
+
+    fs = get_fs();
+    set_fs( KERNEL_DS );
+    bytes = sock_recvmsg( listener.sock, &message, size, message.msg_flags );
+    set_fs( fs );
+}
+
+static void stonith_run(void) {
+    unsigned char buffer[1500];
+
     lock_kernel();
     listener.running = 1;
     current->flags |= PF_NOFREEZE;
@@ -32,6 +58,7 @@ static void run(void) {
     unlock_kernel();
 
     for (;;) {
+	stonith_receive( buffer, sizeof buffer );
 	if ( signal_pending(current) )  break;
         /* what */
 	msleep( 500 );
@@ -65,7 +92,7 @@ static int __init stonith_init(void) {
         return -EOPNOTSUPP;
     }
 
-    listener.thread = kthread_run( (void *)run, NULL, MODULE_NAME );
+    listener.thread = kthread_run( (void *)stonith_run, NULL, MODULE_NAME );
     if ( IS_ERR(listener.thread) ) {
         printk( KERN_INFO MODULE_NAME": unable to start kernel thread\n" );
 	return -ENOMEM;
