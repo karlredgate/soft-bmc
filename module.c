@@ -1,6 +1,7 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/miscdevice.h>
 #include <linux/init.h>
 #include <linux/kthread.h>
 
@@ -84,12 +85,39 @@ static void stonith_run(void) {
     mb();
 }
 
+static int
+stonith_ioctl( struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg ) {
+    switch ( cmd ) {
+    case 0xdead: {
+        return 0;
+    }
+    }
+    return -ENOIOCTLCMD;
+}
+
+static struct file_operations stonith_fileops = {
+    .owner = THIS_MODULE,
+    .ioctl = stonith_ioctl,
+};
+
+static struct miscdevice stonith_misc = {
+    .minor = MISC_DYNAMIC_MINOR,
+    .name  = "stonith",
+    .fops  = &stonith_fileops,
+};
+
 static int __init stonith_init(void) {
     int err;
 
     memset( &listener, 0, sizeof listener );
     kobject_init( &listener.kobj );
     kobject_set_name( &listener.kobj, "stonith" );
+
+    err = misc_register( &stonith_misc );
+    if ( err ) {
+        printk( KERN_ERR MODULE_NAME": failed to register misc device\n" );
+        return err;
+    }
 
     err = sock_create( AF_INET6, SOCK_DGRAM, IPPROTO_UDP, &listener.sock );
     if ( err < 0 ) {
@@ -134,6 +162,9 @@ static void __exit stonith_exit(void) {
     }
 
     kobject_del( &listener.kobj );
+    if ( misc_deregister(&stonith_misc) < 0 ) {
+        printk( KERN_ERR MODULE_NAME": failed to deregister misc device\n" );
+    }
 
     printk( KERN_INFO MODULE_NAME": unloaded\n" );
 }
