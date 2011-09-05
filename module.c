@@ -18,6 +18,7 @@
 static const struct in6_addr local_in6addr_any = IN6ADDR_ANY_INIT;
 
 static struct {
+    struct kobject kobj;
     struct task_struct *thread;
     int running;
     struct socket *sock;
@@ -87,6 +88,8 @@ static int __init stonith_init(void) {
     int err;
 
     memset( &listener, 0, sizeof listener );
+    kobject_init( &listener.kobj );
+    kobject_set_name( &listener.kobj, "stonith" );
 
     err = sock_create( AF_INET6, SOCK_DGRAM, IPPROTO_UDP, &listener.sock );
     if ( err < 0 ) {
@@ -109,6 +112,9 @@ static int __init stonith_init(void) {
         printk( KERN_INFO MODULE_NAME": unable to start kernel thread\n" );
 	return -ENOMEM;
     }
+
+    kobject_add( &listener.kobj );
+
     printk( KERN_INFO MODULE_NAME": loaded\n" );
     return 0;
 }
@@ -126,6 +132,8 @@ static void __exit stonith_exit(void) {
 	    mb();
         }
     }
+
+    kobject_del( &listener.kobj );
 
     printk( KERN_INFO MODULE_NAME": unloaded\n" );
 }
