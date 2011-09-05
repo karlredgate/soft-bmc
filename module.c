@@ -14,6 +14,8 @@
 #include <linux/delay.h>
 #include <linux/reboot.h>
 
+#include "stonith.h"
+
 #define MODULE_NAME "stonith"
 
 static const struct in6_addr local_in6addr_any = IN6ADDR_ANY_INIT;
