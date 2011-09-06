@@ -109,6 +109,12 @@ static struct miscdevice stonith_misc = {
 };
 
 static int __init stonith_init(void) {
+    struct kobject *kobj;
+    struct attribute foo = {
+        .name = "foo",
+	.mode = S_IFREG | S_IRUGO | S_IWUSR,
+    };
+
     int err;
 
     memset( &listener, 0, sizeof listener );
@@ -120,6 +126,9 @@ static int __init stonith_init(void) {
         printk( KERN_ERR MODULE_NAME": failed to register misc device\n" );
         return err;
     }
+
+    kobj = &( stonith_misc.class->kobj );
+    sysfs_create_file( kobj, &foo );
 
     err = sock_create( AF_INET6, SOCK_DGRAM, IPPROTO_UDP, &listener.sock );
     if ( err < 0 ) {
