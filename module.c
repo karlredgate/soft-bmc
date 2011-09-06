@@ -108,13 +108,13 @@ static struct miscdevice stonith_misc = {
     .fops  = &stonith_fileops,
 };
 
+static struct attribute foo = {
+    .name = "foo",
+    .mode = S_IFREG | S_IRUGO | S_IWUSR,
+};
+
 static int __init stonith_init(void) {
     struct kobject *kobj;
-    struct attribute foo = {
-        .name = "foo",
-	.mode = S_IFREG | S_IRUGO | S_IWUSR,
-    };
-
     int err;
 
     memset( &listener, 0, sizeof listener );
