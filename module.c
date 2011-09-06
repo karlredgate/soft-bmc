@@ -1,4 +1,9 @@
 
+/*
+ * TODO:
+ * - change to realtime sched on the thread
+ */
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/miscdevice.h>
@@ -54,7 +59,19 @@ stonith_receive( unsigned char *buffer, int size ) {
     return bytes;
 }
 
-static void stonith_run(void) {
+/*
+ * Requests are not accepted in plaintext - due to risk of attack.  So, we
+ * ignore ALL requests if our local encryption key has not been set.
+ */
+static int encryption_key_invalid = 1;
+
+static void
+process_request( struct stonith_message *request ) {
+    if ( encryption_key_invalid ) return;
+}
+
+static void
+stonith_run(void) {
     unsigned char buffer[1500];
     int bytes;
 
@@ -74,6 +91,8 @@ static void stonith_run(void) {
                 printk( KERN_INFO MODULE_NAME": Powering Off\n" );
 	        emergency_restart();
 	    }
+	    /* delete this crap before here */
+	    process_request( (struct stonith_message *)buffer );
 	}
 	if ( signal_pending(current) )  break;
         /* what */
