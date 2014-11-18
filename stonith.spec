@@ -5,7 +5,7 @@ Release: 100
 Group: System Environment/Tools
 License: GPL
 Vendor: Redgate
-Packager: Karl N. Redgate <Karl.Redgate@stratus.com>
+Packager: Karl N. Redgate <Karl.Redgate@gmail.com>
 BuildRoot: %(echo $PWD)/exports
 %define _topdir %(echo $PWD)/rpm
 
